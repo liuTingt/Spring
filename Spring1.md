@@ -341,3 +341,385 @@ AOP横向抽取机制，无接口情况
    除基础jar包外，添加aopaliance-1.0.jar、aspectjweaver-1.8.7.jar、spring-aop-4.2.4.jar、spring-aspects-4.2.4.jar
 
 2. 创建spring核心配置文件，导入aop约束
+
+**使用表单时配置切入点**
+
+1. 切入点，实际增强的方法
+
+2. 常用的表达式
+
+   execution(<访问修饰符>?<返回类型><方法名>(<参数>)<异常>)
+
+   - execution(* org.ltt.aop.Book.add(..))
+
+   - execution(* org.ltt.aop.Book.*(..))
+   - execution(* * . *(..))   【注：两个星之间没有空格】
+   - 匹配所有save开头的方法 execution(* save*(..))
+
+**aspectj的aop操作**
+
+1. 配置对象
+
+   ```
+   <bean id="book" class=""></bean>
+   <bean id="myBook" class=""></bean>
+   ```
+
+2. 配置aop操作
+
+   ```
+   <aop:config>
+   	<!-- 配置切入点 -->
+   	<aop:pointcut expression="execution(* com.ltt.aop.Book.*(..))" id="pointcut1">
+   	
+   	<!-- 配置切面 把增强用到方法上-->
+   	<aop:aspect ref="myBook">
+   		<!-- 配置增强类型  method:增强类里面使用哪个方法作为前置-->
+   		<aop:before method="before1" pointcut-ref="pointcut1"/>
+   		
+   		<!-- 配置后置通知 -->
+   		<aop:after-returing method="after1" pointcut-ref="pointcut1/">
+   		
+   		<!-- 配置环绕通知 -->
+   		<aop:around method="around1" pointcut="pointcut1">
+   	<aop:aspect>
+   </aop:config>
+   
+   在增强类中的环绕通知的方法如下：
+   public void around1(ProceedingJoinPoint proceedingJoinPoint) throws Throwable{
+   	// TODO 方法之前
+   	
+   	// 执行被增强的方法
+   	proceedingJoinPoint.proceed();
+   	
+   	// TODO 方法之后
+   }
+   ```
+
+   **基于aspectj的注解aop（注解方式）**
+
+   1. 使用该注解方式实现aop操作
+
+      第一步：创建对象
+
+      ```
+      <bean id="book" class=""></bean>
+      <bean id="myBook" class=""></bean>
+      ```
+
+      第二步：在spring核心配置文件中，开启aop操作
+
+      ```
+      <!-- 开启aop操作 -->
+      <aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+      ```
+
+      第三步：在增强类上面使用注解完成aop操作（MyBook类上）
+
+      ```
+      @Aspect
+      public class MyBook{
+      	@Before(value="execution(* com.ltt.Book.*(..))")
+      	public void before1() {
+      		system.out.println("before.......")
+      	}
+      }
+      ```
+
+**增强方式的注解：**
+
+- @Before：前置通知
+- @AfterReturning：后置通知
+- @Around：环绕通知
+- @AfterThrowing：抛出通知
+- @After：最终final通知，不管是否异常，该通知都会执行
+
+## 8、spring的jdbcTemplate操作
+
+1、spring框架一站式框架
+
+- 针对javaee三层开发，每一层都有解决技术
+- 在dao层，使用jdbcTemplate
+
+2、spring对不同的持久化技术做了封装
+
+- JDBC :JdbcTemplate
+- Hibernate5.0:HibernateTemplate
+- IBatis(MyBatis):SqlMapClientTemplate
+- JPA:JpaTemplate
+
+**使用JdbcTemplate进行curd操作**
+
+1、准备工作
+
+导入jdbcTemplate使用的jar包：spring-jdbc-4.2.4.jar、spring-tx-4.2.4.jar、数据库驱动jar包
+
+2、创建对象，设置数据库信息
+
+```
+DriverManagerDataSource dataSource = new DriverManagerDataSource();
+dataSource.setDriverClassName("com.mysql.jdbc.Driver");
+dataSource.setUrl("jdbc:mysql:///test");
+dataSource.setUserName("root");
+dataSource.setPassword("root");
+```
+
+3、创建jdbcTemplate对象，设置数据源
+
+```
+JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+```
+
+4、调用jdbcTemplate对象里面的方法实现操作
+
+```
+// 实现新增
+String sql = "insert into user values(?,?)";
+int rows = jdbcTemplate.updata(sql, "小张", "123456");
+
+// 实现修改
+String sql = "update user set password=? where username=?";
+int rows2 = jdbcTemplate.update(sql, "654321", "小张");
+
+// 实现删除
+String sql = "delete from user where username=?"
+jdbcTemplate.update(sql, "小张");
+
+// 查询: jdbcTemplate实现查询，有接口RowMapper，但是需要自己实现该接口进行数据封装
+String sql = "select count(*) from user";
+int count = jdbcTempalte.queryForObject(sql, Integer.class);
+
+// 实现查询返回对象
+String sql = "select * from user where username=?";
+User user = jdbcTempalte.queryForObject(sql, new MyRowMapper, "小张");
+system.out.println(user);
+
+// 实现查询集合
+String sql = "select * from user";
+// 执行query方法，会依次调用MyROwMapper中mapRow方法，返回不同对象，放到list集合中
+List<User> list = jdbcTemplate.query(sql, new MyRowMapper);
+```
+
+实现接口RowMapper
+
+```
+class MyROwMapper implemates RowMapper<User> {
+	@Override
+	public User mapRow(ResultSet rs, int num) {
+		// 	1从结果集里面把数据得到
+		String username = rs.getString("username");
+		String password = rs.getString("password");
+		
+		// 2把得到的数据封装到对象里面
+		User user = new User(username,password);
+		return user;
+	}	
+}
+```
+
+5、jdbc底层实现代码
+
+```
+Connection conn = null;
+PreparedStatement psmt = null;
+ResultSet rs = null;
+try {
+    // 加载数据库驱动
+    Class.forName("com.msyql.jdbc.Driver");
+    // 创建链接
+    conn = DriverManager.getConnetcion("jdbc:msyql:///test", "root", "root");
+    
+    // 编写sql
+    String sql = "select * from user where username=?";
+    // 预编译sql
+    psmt = conn.prepareStatement(sql);
+    // 设置参数
+    psmt.setString(1, "小张");
+    // 执行sql
+    rs = psmt.executeQuery();
+    // 遍历结果集
+    while(rs.next()) {
+    	String username = rs.getString("username");
+    	String password = rs.getString("password");
+    	 User user = new User();
+    	 user.setUsername(username);
+    	 user.setPassword(password);
+    	 system.out.print(user);
+    }
+} catch (Exception e) {
+e.printSrtackTrace();
+} final {
+	rs.close();
+	psmt.close();
+	conn.close();
+}
+```
+
+## 9、spring配置c3p0连接池和dao使用jdbcTemplate
+
+1. **spring配置c3p0连接池**
+
+   第一步：导入jar包
+
+   ​	c3p0-0.9.2.1.jar、mchange-commons-java-0.2.3.4.jar
+
+   第二步：创建spring配置文件，配置连接池
+
+   ​	java代码实现（了解）
+
+   ```
+   CombopooledDataSource dataSource = new CombopooledDataSource();
+   dataSource.setDriverClass("com.mysql.jdbc.Driver");
+   dataSource.setJdbcUrl("jdbc:mysql:///test");
+   dataSource.setUser("root");
+   dataSource.setPassword("root");
+   ```
+
+   ​	使用配置文件配置c3p0
+
+   ```
+   <bean id="dataSource" class="com.mchage.v2.c3p0.CombopooledDataSource">
+   	<property name="driverClass" value="com.mysql.jdbc.Driver"/>
+   	<property name="jdbcUrl" value="jdbc:mysql://test"/>
+   	<property name="user" value="root"/>
+   	<property name="password" vaule="root"/>
+   </bean>
+   ```
+
+   
+
+2. **dao使用jdbcTemplate**
+
+在dao层使用连接池建立数据库连接
+
+```
+<!-- 创建service和dao对象，在service注入dao对象 -->
+<bean id="userService" class="com.ltt.UserService">
+	<property name="userDao" ref="userDao"/>
+</bean>
+
+<bean id="userDao" class="com.ltt.UserDao">
+	<!-- 注入jdbcTemplate模板对象 -->
+	<property name="jdbcTemplate" value="jdbcTemplate">
+</bean>
+
+<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdcTemplate">
+	<!-- 把dataSource传递到模板对象中 -->
+	<property name="dataSource" ref="dataSource">
+</bean>
+```
+
+自此可通过c3p0连接池创建连接
+
+## 10、spring事务
+
+1. **事务概念**
+
+   - 什么是事务：一组操作中，要么全部成功，要么全部失败
+   - 事务特性：原子性、一致性、隔离性、持久性
+   - 不考虑隔离性会产生脏读、不可重复读、幻读。可设置隔离级别解决该问题
+
+2. **spring事务管理api**
+
+   spring事务管理两种方式：
+
+   ​	第一种：编程式事务管理（不用）
+
+   ​	第二种：声明式事务管理
+
+   ​		 1）基于xml配置文件实现
+
+     	    2）基于注解实现
+
+3. **spring事务管理中的api**
+
+   1) 事务管理器接口：PlatformTransactionManager
+
+   spring为不同的持久化框架提供了不同的PlatformTransactionManager接口实现类
+
+   ```
+   spring jdbc或iBatis进行持久化数据时使用：org.springframework.jdbc.datasource.DataSourceTransactionManager
+   ```
+
+   ```
+   使用Hibernate5.0版本进行持久化数据时使用：org.springframework.orm.hibernate5.HibernateTransactionManager
+   ```
+
+   2) 事务定义信息（隔离、传播 、超时、只读）：TransactionDefintion
+
+   
+
+   3) 事务具体运行状态：TransactionStatus
+
+**搭建转账环境**
+
+1、创建数据库表，添加数据
+
+2、创建service和dao类，完成注入关系
+
+3、会产生问题：
+
+​	当转账过程中发生异常，会出现数据丢失现象，即出现小王少1000，小张不会多1000
+
+4、解决：
+
+​	添加事务解决，出现异常进行回滚操作
+
+**声明式事务管理（xml配置）**
+
+​	配置文件中添加事务的约束，配置文件方式使用了aop思想
+
+​	1、配置事务管理器
+
+```
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+	<!-- 注入dataSource -->
+	<property name="dataSource" ref="dataSource">
+</bean>
+```
+
+​	2、配置事务增强
+
+```
+<tx:advice id="txadvice" transaction-manager="transactionManager">
+	<!-- 做事务操作 -->
+	<tx:attributes>
+		<!-- 设置进行事务操作的方法匹配规则 -->
+		<tx:methods name="account*" propagation="REQUIRED">
+	</tx:attributes>
+<tx:advice>
+```
+
+​	3、配置切面
+
+```
+<aop:config>
+	<!-- 切入点 -->
+	<aop:pointcut expression="execution(* com.ltt.service.OrderService.*(..))" id="pointcut1"/>
+	<!-- 切面 -->
+	<aop:advisor advice-ref="txadvice" pointcut-ref="pointcut1" />
+</aop:config>
+```
+
+**声明式事务管理（注解）**
+
+1、配置事务管理器
+
+```
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+	<property name="dataSource" ref="dataSource">
+</bean>
+```
+
+2、开启事务注解
+
+```
+<tx:annotation-driver transaction-manager="transactionManager">
+```
+
+3、在使用事务方法所在类上添加注解
+
+```
+@Transactional
+```
+
