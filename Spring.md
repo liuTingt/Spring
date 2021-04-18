@@ -291,17 +291,17 @@ name属性值写@Component注解中value属性值,即bean的id
 
 纵向抽取机制：
 
-![image-20201116221817445](E:\Study\Java\spring\Spring\Spring.assets\image-20201116221817445.png)
+![image-20201116221817445](Spring.assets/image-20201116221817445.png)
 
 AOP横向抽取机制，有接口情况
 
-![image-20201116222513884](E:\Study\Java\spring\Spring\Spring.assets\image-20201116222513884.png)
+![image-20201116222513884](Spring.assets/image-20201116222513884.png)
 
 AOP横向抽取机制，无接口情况
 
 
 
-![image-20201116222953370](E:\Study\Java\spring\Spring\Spring.assets\image-20201116222953370.png)
+![image-20201116222953370](Spring.assets/image-20201116222953370.png)
 
 **AOP操纵术语**
 
@@ -343,7 +343,7 @@ Weaving（织入）：通过动态代理，在目标方法中执行通知内容�
 
 
 
-![image-20210330205403619](E:\Study\Java\spring\Spring\Spring.assets\image-20210330205403619.png)
+![image-20210330205403619](Spring.assets/image-20210330205403619.png)
 
 ## 7、spring的AOP操作
 
